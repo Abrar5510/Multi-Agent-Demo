@@ -1,0 +1,30 @@
+# Coral Server Agent Registry
+# Each agent block tells Coral the name and internal URL of the agent
+
+[[agent]]
+name = "chatdev"
+url = "http://chatdev:7000"
+
+[[agent]]
+name = "superagi"
+url = "http://superagi:9000"
+
+[[agent]]
+name = "autogpt"
+url = "http://autogpt:8080"
+
+[[agent]]
+name = "finrobot"
+url = "http://finrobot:8500"
+
+[[agent]]
+name = "langchain"
+url = "http://langchain:8600"
+
+[[agent]]
+name = "auto-pr"
+url = "http://auto-pr:8700"
+
+[[agent]]
+name = "n8n"
+url = "http://n8n:5678"

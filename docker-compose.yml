@@ -1,16 +1,15 @@
-version: '3.9'
 services:
-
   coral-server:
-    build: ./coral-server
-    container_name: coral-server
+    image: ghcr.io/coral-protocol/coral-server:latest
+    container_name: ${CORAL_SERVICE_NAME}
     ports:
-      - "8000:8000"
+      - "${CORAL_SERVICE_PORT}:5555"
     env_file:
       - .env
     volumes:
-      - coral_data:/app/data
+      - "/var/run/docker.sock:/var/run/docker.sock"
     restart: unless-stopped
+
 
   n8n:
     image: docker.n8n.io/n8nio/n8n:latest
@@ -39,7 +38,7 @@ services:
     restart: unless-stopped
 
   autogpt:
-    build: ./agents/autogpt
+    build: ./agents/autogpt/AutoGPT
     container_name: autogpt
     env_file:
       - .env
@@ -56,7 +55,7 @@ services:
     restart: on-failure
 
   superagi:
-    build: ./agents/superagi
+    build: ./agents/superagi/SuperAGI
     container_name: superagi
     env_file:
       - .env
@@ -74,7 +73,7 @@ services:
     restart: on-failure
 
   crewai:
-    build: ./agents/crewai
+    build: ./agents/crewai/crewAI
     container_name: crewai
     env_file:
       - .env
@@ -90,7 +89,7 @@ services:
     restart: on-failure
 
   langchain-agent:
-    build: ./agents/langchain-agent
+    build: ./agents/langchain-agent/agents-from-scratch
     container_name: langchain-agent
     env_file:
       - .env
@@ -106,7 +105,7 @@ services:
     restart: on-failure
 
   finrobot:
-    build: ./agents/finrobot
+    build: ./agents/finrobot/FinRobot
     container_name: finrobot
     env_file:
       - .env
@@ -123,7 +122,7 @@ services:
     restart: on-failure
 
   chatdev:
-    build: ./agents/chatdev
+    build: ./agents/chatdev/ChatDev
     container_name: chatdev
     env_file:
       - .env
@@ -139,7 +138,7 @@ services:
     restart: on-failure
 
   autopr:
-    build: ./agents/autopr
+    build: ./agents/autopr/AutoPR
     container_name: autopr
     env_file:
       - .env
