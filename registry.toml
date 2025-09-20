@@ -1,8 +1,86 @@
-[[local-agent]]
-path = "agents/firecrawl"
+[[agents]]
 
-[[local-agent]]
-path = "agents/github"
+[[agents]]
+id = "mailpilot"
+name = "MailPilot"
+runtime = "docker"
+image = "ghcr.io/lablab-ai/mailpilot:latest"
 
-[[local-agent]]
-path = "agents/interface"
+[[agents]]
+id = "otterdocs"
+name = "Otter Docs"
+runtime = "docker"
+image = "ghcr.io/lablab-ai/otterdocs:latest"
+
+
+[[agents]]
+id = "brandvision"
+name = "Brand Vision"
+runtime = "docker"
+image = "ghcr.io/lablab-ai/brandvision:latest"
+
+[[agents]]
+id = "actionplanner"
+name = "ActionPlanner"
+runtime = "docker"
+image = "ghcr.io/lablab-ai/actionplanner:latest"
+
+[[agents]]
+id = "ideastorm"
+name = "IdeaStorm"
+runtime = "docker"
+image = "ghcr.io/lablab-ai/ideastorm:latest"
+
+[[agents]]
+id = "streamlead"
+name = "StreamLead"
+runtime = "docker"
+image = "ghcr.io/lablab-ai/streamlead:latest"
+
+[[agents]]
+id = "echomate"
+name = "EchoMate"
+runtime = "docker"
+image = "ghcr.io/lablab-ai/echomate:latest"
+
+[[agents]]
+id = "datatonic"
+name = "DataTonic"
+runtime = "docker"
+image = "ghcr.io/lablab-ai/datatonic:latest"
+
+[[agents]]
+id = "geminsights"
+name = "GemInsights"
+runtime = "docker"
+image = "ghcr.io/lablab-ai/geminsights:latest"
+
+[[agents]]
+id = "competitivia"
+name = "CompetitivIA"
+runtime = "docker"
+image = "ghcr.io/lablab-ai/competitivia:latest"
+
+[[agents]]
+id = "openwise"
+name = "OpenWise"
+runtime = "docker"
+image = "ghcr.io/lablab-ai/openwise:latest"
+
+[[agents]]
+id = "connectai"
+name = "Connect-AI"
+runtime = "docker"
+image = "ghcr.io/lablab-ai/connectai:latest"
+
+[[agents]]
+id = "aurora"
+name = "Aurora AI"
+runtime = "docker"
+image = "ghcr.io/lablab-ai/aurora:latest"
+
+[[agents]]
+id = "starto"
+name = "Starto"
+runtime = "docker"
+image = "ghcr.io/lablab-ai/starto:latest"
