@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { CrossmintPayButton } from "@crossmint/client-sdk-react";
 
 export default function App() {
   const [agents, setAgents] = useState([]);
@@ -64,13 +63,6 @@ export default function App() {
           >
             Start Session
           </button>
-          <div className="mt-6">
-            <CrossmintPayButton
-              clientId="YOUR_CROSSMINT_CLIENT_ID"
-              environment="staging"
-              mintConfig={{ type: "erc-721", quantity: "1" }}
-            />
-          </div>
         </div>
       )}
 
