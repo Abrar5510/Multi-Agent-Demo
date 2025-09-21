@@ -1,0 +1,12 @@
+[server]
+host = "0.0.0.0"
+port = 5555
+
+[database]
+url = "postgresql://postgres:postgres@postgres:5432/coral"
+
+[redis]
+url = "redis://redis:6379"
+
+[registry]
+path = "/config/registry.toml"

@@ -41,24 +41,15 @@ services:
     image: ghcr.io/coral-protocol/coral-server:latest
     container_name: coral-server
     ports:
-      - "${CORAL_SERVICE_PORT:-5555}:5555"
-    env_file:
-      - .env
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock"
-      - ./registry.toml:/config/registry.toml
-      - coral_data:/app/data
+      - "5555:5555"
     depends_on:
-      redis:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5555/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - postgres
+      - redis
+    volumes:
+      - ./config.toml:/config/config.toml
+      - ./registry.toml:/config/registry.toml
+      - /var/run/docker.sock:/var/run/docker.sock
+
 
   # Tooling Services
   n8n:
@@ -164,7 +155,7 @@ services:
 
   crewai:
     build:
-      context: ./agents/crewai
+      context: ./agents/crewai/crewAI
       dockerfile: Dockerfile
     container_name: crewai
     env_file:
@@ -184,7 +175,7 @@ services:
 
   chatdev:
     build:
-      context: ./agents/chatdev
+      context: ./agents/chatdev/ChatDev
       dockerfile: Dockerfile
     container_name: chatdev
     env_file:
@@ -204,7 +195,7 @@ services:
 
   autopr:
     build:
-      context: ./agents/autopr
+      context: ./agents/autopr/AutoPR
       dockerfile: Dockerfile
     container_name: autopr
     env_file:
