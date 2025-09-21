@@ -1,16 +1,66 @@
+version: "3.9"
+
 services:
+  # Infrastructure Services
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  postgres:
+    image: postgres:14
+    container_name: postgres
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Coral Server
   coral-server:
     image: ghcr.io/coral-protocol/coral-server:latest
-    container_name: ${CORAL_SERVICE_NAME}
+    container_name: coral-server
     ports:
-      - "${CORAL_SERVICE_PORT}:5555"
+      - "${CORAL_SERVICE_PORT:-5555}:5555"
     env_file:
       - .env
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
+      - ./registry.toml:/config/registry.toml
+      - coral_data:/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5555/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-
+  # Tooling Services
   n8n:
     image: docker.n8n.io/n8nio/n8n:latest
     container_name: n8n
@@ -21,7 +71,8 @@ services:
     env_file:
       - .env
     depends_on:
-      - coral-server
+      coral-server:
+        condition: service_healthy
     restart: unless-stopped
 
   flowise:
@@ -34,155 +85,156 @@ services:
     volumes:
       - flowise_data:/usr/src/app/.data
     depends_on:
-      - coral-server
+      coral-server:
+        condition: service_healthy
     restart: unless-stopped
 
+  # Backend (Node.js)
+  backend:
+    build: ./backend
+    container_name: coral-backend
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      coral-server:
+        condition: service_healthy
+    restart: on-failure
+
+  # Frontend (React/Vite)
+  frontend:
+    build: ./frontend
+    container_name: coral-frontend
+    ports:
+      - "5173:5173"
+    env_file:
+      - .env
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      - backend
+    restart: on-failure
+
+  # AI Agents
   autogpt:
-    build: ./agents/autogpt/AutoGPT
+    build:
+      context: ./agents/autogpt/AutoGPT
+      dockerfile: Dockerfile
     container_name: autogpt
     env_file:
       - .env
     environment:
-      - SERVICE_NAME=${AUTOGPT_SERVICE_NAME}
-      - SERVICE_PORT=${AUTOGPT_SERVICE_PORT}
+      - SERVICE_NAME=autogpt-service
+      - SERVICE_PORT=8000
+      - REDIS_URL=redis://redis:6379
+      - CORAL_SERVER_URL=http://coral-server:5555
     ports:
-      - "${AUTOGPT_SERVICE_PORT}:${AUTOGPT_SERVICE_PORT}"
+      - "8000:8000"
     volumes:
-      - autogpt_data:/app
+      - ./agents/autogpt:/app/code
     depends_on:
-      - coral-server
-      - redis
+      coral-server:
+        condition: service_healthy
     restart: on-failure
 
   superagi:
-    build: ./agents/superagi/SuperAGI
+    build:
+      context: ./agents/superagi/SuperAGI
+      dockerfile: Dockerfile
     container_name: superagi
     env_file:
       - .env
     environment:
-      - SERVICE_NAME=${SUPERAGI_SERVICE_NAME}
-      - SERVICE_PORT=${SUPERAGI_SERVICE_PORT}
+      - SERVICE_NAME=superagi-service
+      - SERVICE_PORT=8001
+      - DB_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-postgres}
+      - REDIS_URL=redis://redis:6379
+      - CORAL_SERVER_URL=http://coral-server:5555
     ports:
-      - "${SUPERAGI_SERVICE_PORT}:${SUPERAGI_SERVICE_PORT}"
+      - "8001:8001"
     volumes:
-      - superagi_data:/app
+      - ./agents/superagi:/app/code
     depends_on:
-      - coral-server
-      - postgres
-      - redis
+      coral-server:
+        condition: service_healthy
     restart: on-failure
 
   crewai:
-    build: ./agents/crewai/crewAI
+    build:
+      context: ./agents/crewai
+      dockerfile: Dockerfile
     container_name: crewai
     env_file:
       - .env
     environment:
-      - SERVICE_NAME=${CREWAI_SERVICE_NAME}
-      - SERVICE_PORT=${CREWAI_SERVICE_PORT}
+      - SERVICE_NAME=crewai-service
+      - SERVICE_PORT=8002
+      - CORAL_SERVER_URL=http://coral-server:5555
     ports:
-      - "${CREWAI_SERVICE_PORT}:${CREWAI_SERVICE_PORT}"
+      - "8002:8002"
     volumes:
-      - crewai_data:/app
+      - ./agents/crewai:/app/code
     depends_on:
-      - coral-server
-    restart: on-failure
-
-  langchain-agent:
-    build: ./agents/langchain-agent/agents-from-scratch
-    container_name: langchain-agent
-    env_file:
-      - .env
-    environment:
-      - SERVICE_NAME=${LANGCHAIN_SERVICE_NAME}
-      - SERVICE_PORT=${LANGCHAIN_SERVICE_PORT}
-    ports:
-      - "${LANGCHAIN_SERVICE_PORT}:${LANGCHAIN_SERVICE_PORT}"
-    volumes:
-      - langchain_data:/app
-    depends_on:
-      - coral-server
-    restart: on-failure
-
-  finrobot:
-    build: ./agents/finrobot/FinRobot
-    container_name: finrobot
-    env_file:
-      - .env
-    environment:
-      - SERVICE_NAME=${FINROBOT_SERVICE_NAME}
-      - SERVICE_PORT=${FINROBOT_SERVICE_PORT}
-    ports:
-      - "${FINROBOT_SERVICE_PORT}:${FINROBOT_SERVICE_PORT}"
-    volumes:
-      - finrobot_data:/app
-    depends_on:
-      - coral-server
-      - postgres
+      coral-server:
+        condition: service_healthy
     restart: on-failure
 
   chatdev:
-    build: ./agents/chatdev/ChatDev
+    build:
+      context: ./agents/chatdev
+      dockerfile: Dockerfile
     container_name: chatdev
     env_file:
       - .env
     environment:
-      - SERVICE_NAME=${CHATDEV_SERVICE_NAME}
-      - SERVICE_PORT=${CHATDEV_SERVICE_PORT}
+      - SERVICE_NAME=chatdev-service
+      - SERVICE_PORT=8005
+      - CORAL_SERVER_URL=http://coral-server:5555
     ports:
-      - "${CHATDEV_SERVICE_PORT}:${CHATDEV_SERVICE_PORT}"
+      - "8005:8005"
     volumes:
-      - chatdev_data:/app
+      - ./agents/chatdev:/app/code
     depends_on:
-      - coral-server
+      coral-server:
+        condition: service_healthy
     restart: on-failure
 
   autopr:
-    build: ./agents/autopr/AutoPR
+    build:
+      context: ./agents/autopr
+      dockerfile: Dockerfile
     container_name: autopr
     env_file:
       - .env
     environment:
-      - SERVICE_NAME=${AUTOPR_SERVICE_NAME}
-      - SERVICE_PORT=${AUTOPR_SERVICE_PORT}
+      - SERVICE_NAME=autopr-service
+      - SERVICE_PORT=8006
+      - CORAL_SERVER_URL=http://coral-server:5555
     ports:
-      - "${AUTOPR_SERVICE_PORT}:${AUTOPR_SERVICE_PORT}"
+      - "8006:8006"
     volumes:
-      - autopr_data:/app
+      - ./agents/autopr:/app/code
     depends_on:
-      - coral-server
+      coral-server:
+        condition: service_healthy
     restart: on-failure
-
-  redis:
-    image: redis:7-alpine
-    container_name: redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    restart: unless-stopped
-
-  postgres:
-    image: postgres:14
-    container_name: postgres
-    env_file:
-      - .env
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
 
 volumes:
   coral_data:
   n8n_data:
   flowise_data:
+  redis_data:
+  postgres_data:
   autogpt_data:
   superagi_data:
   crewai_data:
-  langchain_data:
-  finrobot_data:
   chatdev_data:
   autopr_data:
-  redis_data:
-  postgres_data:
+
+networks:
+  default:
+    driver: bridge
+    name: ai-agents-network
